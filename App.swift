@@ -1,70 +1,111 @@
 import UIKit
+import Foundation
 
 class Product {
     var name: String
-    var imageURL: URL
     var price: Double
-    var productDescription: String
+    var image: UIImage
 
-    init(name: String, imageURL: URL, price: Double, productDescription: String) {
+    init(name: String, price: Double, image: UIImage) {
         self.name = name
-        self.imageURL = imageURL
         self.price = price
-        self.productDescription = productDescription
+        self.image = image
     }
 }
 
-class ProductCell: UITableViewCell {
-    @IBOutlet weak var productImageView: UIImageView!
-    @IBOutlet weak var nameLabel: UILabel!
-    @IBOutlet weak var priceLabel: UILabel!
-    @IBOutlet weak var productDescriptionLabel: UILabel!
+class ShoppingCart {
+    var items: [Product]
 
-    func configure(with product: Product) {
-        nameLabel.text = product.name
-        priceLabel.text = "$\(product.price)"
-        productDescriptionLabel.text = product.productDescription
-
-        let task = URLSession.shared.dataTask(with: product.imageURL) { data, response, error in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self.productImageView.image = image
-                }
-            }
+    func totalPrice() -> Double {
+        var total: Double = 0
+        for item in items {
+            total += item.price
         }
-        task.resume()
+        return total
+    }
+
+    func addProduct(product: Product) {
+        items.append(product)
+    }
+
+    func removeProduct(product: Product) {
+        if let index = items.firstIndex(of: product) {
+            items.remove(at: index)
+        }
     }
 }
 
-class ProductsViewController: UITableViewController {
+class ProductTableViewCell: UITableViewCell {
+    @IBOutlet weak var productImageView: UIImageView!
+    @IBOutlet weak var productNameLabel: UILabel!
+    @IBOutlet weak var productPriceLabel: UILabel!
+    @IBOutlet weak var addToCartButton: UIButton!
+}
+
+class ProductTableViewController: UITableViewController {
     var products: [Product] = []
+    var shoppingCart = ShoppingCart()
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Initialize products array with sample data
+        products.append(Product(name: "Colombian", price: 8.99, image: UIImage(named: "colombian")!))
+        products.append(Product(name: "Ethiopian", price: 12.99, image: UIImage(named: "ethiopian")!))
+        products.append(Product(name: "Brazilian", price: 10.99, image: UIImage(named: "brazilian")!))
+    }
 
-        // 1. Get the JSON data from the server
-        let url = URL(string: "http://www.coffeezyme.com/api/products")!
-        let task = URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                // 2. Parse the JSON data into an array of Product objects
-                let json = try! JSONSerialization.jsonObject(with: data, options: []) as! [[String: Any]]
-                self.products = json.map { productJson in
-                    let name = productJson["name"] as! String
-                    let imageURL = URL(string: productJson["image_url"] as! String)!
-                    let price = productJson["price"] as! Double
-                    let productDescription = productJson["description"] as! String
-                    return Product(name: name, imageURL: imageURL, price: price, productDescription: productDescription)
-                }
-
-                // 3. Reload the table view
-                DispatchQueue.main.async {
-                    self.tableView.reloadData()
-                }
-            }
-        }
-        task.resume()
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return products.count
     }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ProductCell", for: indexPath) as! ProductTableViewCell
+        let product = products[indexPath.row]
+        cell.productNameLabel.text = product.name
+        cell.productPriceLabel.text = "$\(product.price)"
+        cell.productImageView.image = product.image
+        cell.addToCartButton.tag = indexPath.row
+        cell.addToCartButton.addTarget(self, action: #selector(addToCartButtonTapped(_:)), for: .touchUpInside)
+        return cell
+    }
+
+    @objc func addToCartButtonTapped(_
+    @objc func addToCartButtonTapped(_ sender: UIButton) {
+        let product = products[sender.tag]
+        shoppingCart.addProduct(product: product)
+        let alertController = UIAlertController(title: "Success", message: "Product added to cart", preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertController.addAction(okAction)
+        present(alertController, animated: true, completion: nil)
+    }
+
+    @IBAction func viewCartButtonTapped(_ sender: UIBarButtonItem) {
+        let cartViewController = storyboard?.instantiateViewController(withIdentifier: "CartViewController") as! CartViewController
+        cartViewController.shoppingCart = shoppingCart
+        navigationController?.pushViewController(cartViewController, animated: true)
+    }
+}
+
+class CartViewController: UIViewController {
+    @IBOutlet weak var cartTableView: UITableView!
+    @IBOutlet weak var totalPriceLabel: UILabel!
+    var shoppingCart: ShoppingCart!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        totalPriceLabel.text = "$\(shoppingCart.totalPrice())"
+    }
+
+    @IBAction func purchaseButtonTapped(_ sender: UIButton) {
+        let alertController = UIAlertController(title: "Success", message: "Purchase complete", preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default) { action in
+            self.navigationController?.popToRootViewController(animated: true)
+        }
+        alertController.addAction(okAction)
+        present(alertController, animated: true, completion: nil)
+    }
+}
