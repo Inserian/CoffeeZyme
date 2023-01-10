@@ -1,3 +1,4 @@
+#CoffeeZyme
 import UIKit
 import Foundation
 
@@ -49,8 +50,6 @@ class ProductTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Initialize products array with sample data
-        products.append(Product(name: "Colombian", price: 8.99, image: UIImage(named: "colombian")!))
-        products.append(Product(name: "Ethiopian", price: 12.99, image: UIImage(named: "ethiopian")!))
         products.append(Product(name: "Brazilian", price: 10.99, image: UIImage(named: "brazilian")!))
     }
 
